@@ -2,26 +2,16 @@
 set -e
 
 # Default values
-DEFAULT_HOST_NAME="k8smaster.example.net"
 DEFAULT_K8S_VERSION="v1.32"
-DEFAULT_CALICO_VERSION="v3.29.3"
 
 # Parse command line arguments
-HOST_NAME=${1:-$DEFAULT_HOST_NAME}
-K8S_VERSION=${2:-$DEFAULT_K8S_VERSION}
-CALICO_VERSION=${3:-$DEFAULT_CALICO_VERSION}
+K8S_VERSION=${1:-$DEFAULT_K8S_VERSION}
 
 log() {
   echo "$1"
 }
 
-log "Setting hostname to $HOST_NAME..."
-hostnamectl set-hostname "$HOST_NAME"
-
-log "Starting control plane installation with parameters:"
-log "Hostname: $HOST_NAME"
-log "Kubernetes version: $K8S_VERSION"
-log "Calico version: $CALICO_VERSION"
+log "Kubernetes version selection : $K8S_VERSION"
 
 # Disable swap
 log "Disabling swap..."
@@ -134,9 +124,3 @@ log "Kublet enabled."
 log "Checking kubectl, kubelet and kubectl installations..."
 dpkg -l | grep kube
 which kubeadm kubectl kubelet kubectl
-
-# Initialize control plane
-log "Initializing Kubernetes control plane..."
-kubeadm init --control-plane-endpoint="$HOST_NAME"
-
-log "Control plane setup complete! Use the join command above to add worker nodes."

@@ -3,13 +3,15 @@ set -e
 
 # Default values
 DEFAULT_HOST_NAME="k8smaster.example.net"
-DEFAULT_K8S_VERSION="v1.32"
 DEFAULT_POD_NETWORK_CIDR="192.168.0.0/16"
+DEFAULT_K8S_VERSION="v1.32"
+DEFAULT_CALICO_VERSION="v3.29.3"
 
 # Parse command line arguments
 HOST_NAME=${1:-$DEFAULT_HOST_NAME}
 POD_NETWORK_CIDR=${2:-$DEFAULT_POD_NETWORK_CIDR}
 K8S_VERSION=${3:-$DEFAULT_K8S_VERSION}
+CALICO_VERSION=${4:-$DEFAULT_CALICO_VERSION}
 
 log() {
   echo "$1"
@@ -140,9 +142,18 @@ kubeadm init \
   --control-plane-endpoint="$HOST_NAME" \
   --pod-network-cidr="$POD_NETWORK_CIDR"
 
-mkdir -p $HOME/.kube
-cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-chown $(id -u):$(id -g) $HOME/.kube/config
+# Setup kubeconfig for root (since script is run as sudo)
+mkdir -p /root/.kube
+cp -i /etc/kubernetes/admin.conf /root/.kube/config
+chown root:root /root/.kube/config
+
+# Also set up kubeconfig for the actual sudo user
+if [ -n "$SUDO_USER" ]; then
+  USER_HOME=$(eval echo "~$SUDO_USER")
+  mkdir -p $USER_HOME/.kube
+  cp -i /etc/kubernetes/admin.conf $USER_HOME/.kube/config
+  chown $(id -u "$SUDO_USER"):$(id -g "$SUDO_USER") $USER_HOME/.kube/config
+fi
 log "Control plane initialized"
 
 kubectl config set-cluster kubernetes --server=https://${HOST_NAME}:6443
@@ -151,5 +162,9 @@ kubectl config set-cluster kubernetes --server=https://${HOST_NAME}:6443
 log "Verifying cluster status..."
 kubectl cluster-info
 kubectl get nodes
+
+log "Applying Container Network Interface..."
+kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VERSION}/manifests/calico.yaml
+kubectl get pods -n kube-system
 
 echo "Control plane setup complete! Use the join command above to add worker nodes."

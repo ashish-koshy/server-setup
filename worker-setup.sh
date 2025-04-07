@@ -2,69 +2,96 @@
 set -e
 
 # Default values
+DEFAULT_HOST_NAME="k8worker1.example.net"
 DEFAULT_K8S_VERSION="v1.32"
-DEFAULT_PAUSE_IMAGE_VERSION="3.10"
-DEFAULT_DOCKER_VERSION="latest"
 
 # Parse command line arguments
-HOST_NAME=$1
-K8S_VERSION=${2:-$DEFAULT_K8S_VERSION}
-PAUSE_IMAGE_VERSION=${3:-$DEFAULT_PAUSE_IMAGE_VERSION}
-DOCKER_VERSION=${4:-$DEFAULT_DOCKER_VERSION}
+HOST_NAME=${1:-$DEFAULT_HOST_NAME}
+K8S_VERSION=${3:-$DEFAULT_K8S_VERSION}
 
 log() {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
+  echo "$1"
 }
 
 log "Setting hostname to $HOST_NAME..."
-sudo hostnamectl set-hostname "$HOST_NAME"
+hostnamectl set-hostname "$HOST_NAME"
 
-log "Starting worker installation with parameters:"
+log "Starting worker node installation with parameters:"
 log "Hostname: $HOST_NAME"
 log "Kubernetes version: $K8S_VERSION"
-log "Pause image version: $PAUSE_IMAGE_VERSION"
-log "Docker version: $DOCKER_VERSION"
 
-# Common setup steps (same as control plane)
+# Disable swap
 log "Disabling swap..."
-sudo swapoff -a
-sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+swapoff -a
+sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+log "Swap disabled"
 
+# Load kernel modules
 log "Loading kernel modules..."
-sudo tee /etc/modules-load.d/containerd.conf <<EOF
+tee /etc/modules-load.d/containerd.conf <<EOF
 overlay
 br_netfilter
 EOF
-sudo modprobe overlay
-sudo modprobe br_netfilter
+modprobe overlay
+modprobe br_netfilter
+log "Modules loaded"
 
+# Sysctl configuration
 log "Configuring sysctl..."
-sudo tee /etc/sysctl.d/kubernetes.conf <<EOT
+tee /etc/sysctl.d/kubernetes.conf <<EOT
 net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
 net.ipv4.ip_forward = 1
 EOT
-sudo sysctl --system
+sysctl --system
+log "Sysctl configured"
 
-# Conditional cleanup
+# Conditional Kubernetes cleanup
 if command -v kubeadm &>/dev/null || [ -d "/etc/kubernetes" ]; then
-  log "Removing Kubernetes components..."
+  log "Removing existing Kubernetes components..."
   kubeadm reset -f || true
   systemctl stop kubelet || true
-  apt-get remove --purge -y kubeadm kubectl kubelet || true
-  rm -rf /etc/kubernetes ~/.kube /var/lib/kubelet
+  systemctl disable kubelet || true
+  apt-mark unhold kubeadm kubectl kubelet || true
+  apt-get remove --purge -y kubeadm kubectl kubelet kubernetes-cni cri-tools || true
+  apt-get autoremove -y || true
+  rm -rf /etc/kubernetes ~/.kube /var/lib/etcd /var/lib/kubelet /etc/cni/net.d
+  rm -f /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+  rm -f /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  rm -f /etc/apt/sources.list.d/kubernetes.list
 else
-  log "No Kubernetes components found"
+  log "No existing Kubernetes components found"
 fi
 
-if command -v docker &>/dev/null; then
-  log "Removing Docker..."
-  systemctl stop docker
-  apt-get remove --purge -y docker-ce docker-ce-cli containerd.io
-  rm -rf /var/lib/docker
+# Conditional Docker cleanup
+if command -v docker &>/dev/null || systemctl list-unit-files | grep -q docker.service; then
+  log "Removing existing Docker components..."
+  systemctl stop docker || true
+  systemctl disable docker || true
+  apt-get remove --purge -y docker-ce docker-ce-cli containerd.io || true
+  apt-get autoremove -y || true
+  rm -rf /var/lib/docker /var/lib/containerd /etc/docker
+  rm -f /etc/apt/keyrings/docker.gpg
+  rm -f /etc/apt/sources.list.d/docker.list
 else
-  log "No Docker components found"
+  log "No existing Docker components found"
 fi
+
+# Restore Default iptables Rules
+log "Resetting IPTABLES..."
+FILE="iptables-default.rules"
+echo "*filter" > $FILE
+echo ":INPUT ACCEPT [0:0]" >> $FILE
+echo ":FORWARD ACCEPT [0:0]" >> $FILE
+echo ":OUTPUT ACCEPT [0:0]" >> $FILE
+echo "COMMIT" >> $FILE
+
+# Reset iptables
+apt-get install -y iptables-persistent
+iptables-restore < iptables-default.rules
+iptables -A INPUT -p tcp --dport 6443 -j ACCEPT
+netfilter-persistent save
+netfilter-persistent reload
 
 # Install Docker
 log "Installing Docker..."
@@ -73,17 +100,35 @@ apt-get install -y ca-certificates curl
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 chmod a+r /etc/apt/keyrings/docker.asc
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
 apt-get update
 apt-get install -y docker-ce docker-ce-cli containerd.io
 systemctl enable --now docker
+log "Docker installed"
 
 # Install Kubernetes components
-log "Installing Kubernetes..."
-curl -fsSL https://pkgs.k8s.io/core:/stable:/${K8S_VERSION}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${K8S_VERSION}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+log "Installing Kubernetes $K8S_VERSION..."
+curl -fsSL https://pkgs.k8s.io/core:/stable:/${K8S_VERSION}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${K8S_VERSION}/deb/ /" | tee /etc/apt/sources.list.d/kubernetes.list
 apt-get update
 apt-get install -y kubelet kubeadm kubectl
 apt-mark hold kubelet kubeadm kubectl
+log "Kubernetes installed"
 
-log "Worker node setup complete! Join this node to the cluster using the join command from the control plane."
+# Configure containerd
+log "Configuring containerd..."
+mkdir -p /etc/containerd
+containerd config default | tee /etc/containerd/config.toml >/dev/null
+sed -i 's/disabled_plugins = \["cri"\]/enabled_plugins = \["cri"\]/' /etc/containerd/config.toml
+systemctl restart containerd
+log "Containerd configured"
+
+log "Enabling kublet"
+systemctl enable --now kubelet
+log "kublet enabled"
+
+log "Checking kubectl, kubelet and kubectl installations"
+dpkg -l | grep kube
+which kubeadm kubectl kubelet kubectl
+
+echo "Worker node setup complete! Use the join command to join a cluster..."

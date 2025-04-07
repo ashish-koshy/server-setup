@@ -20,7 +20,7 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 kubectl cluster-info
 kubectl get nodes
 
-kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/${$CALICO_VERSION}/manifests/calico.yaml
+kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VERSION}/manifests/calico.yaml
 kubectl get pods -n kube-system
 
 log "Control plane is ready for worker nodes..."

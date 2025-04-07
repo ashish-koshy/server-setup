@@ -110,7 +110,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.
 apt-get update
 apt-get install -y docker-ce docker-ce-cli containerd.io
 systemctl enable --now docker
-log "Docker installed"
+log "Docker installed."
 
 # Install Kubernetes components
 log "Installing Kubernetes $K8S_VERSION..."
@@ -119,7 +119,7 @@ echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.
 apt-get update
 apt-get install -y kubelet kubeadm kubectl
 apt-mark hold kubelet kubeadm kubectl
-log "Kubernetes installed"
+log "Kubernetes installed."
 
 # Configure containerd
 log "Configuring containerd..."
@@ -127,13 +127,13 @@ mkdir -p /etc/containerd
 containerd config default | tee /etc/containerd/config.toml >/dev/null
 sed -i 's/disabled_plugins = \["cri"\]/enabled_plugins = \["cri"\]/' /etc/containerd/config.toml
 systemctl restart containerd
-log "Containerd configured"
+log "Containerd configured."
 
-log "Enabling kublet"
+log "Enabling Kublet..."
 systemctl enable --now kubelet
-log "kublet enabled"
+log "Kublet enabled."
 
-log "Checking kubectl, kubelet and kubectl installations"
+log "Checking kubectl, kubelet and kubectl installations..."
 dpkg -l | grep kube
 which kubeadm kubectl kubelet kubectl
 
@@ -155,8 +155,9 @@ if [ -n "$SUDO_USER" ]; then
   cp -i /etc/kubernetes/admin.conf $USER_HOME/.kube/config
   chown $(id -u "$SUDO_USER"):$(id -g "$SUDO_USER") $USER_HOME/.kube/config
 fi
-log "Control plane initialized"
+log "Control plane initialized."
 
+log "Setting cluster name..."
 kubectl config set-cluster kubernetes --server=https://${HOST_NAME}:6443
 
 # Verify installation
@@ -164,7 +165,7 @@ log "Verifying cluster status..."
 kubectl cluster-info
 kubectl get nodes
 
-log "Applying Container Network Interface..."
+log "Applying CALICO Container Network Interface..."
 kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VERSION}/manifests/calico.yaml
 kubectl get pods -n kube-system
 

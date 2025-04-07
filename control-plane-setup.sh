@@ -24,6 +24,7 @@ log "Starting control plane installation with parameters:"
 log "Hostname: $HOST_NAME"
 log "Pod Network CIDR: $POD_NETWORK_CIDR"
 log "Kubernetes version: $K8S_VERSION"
+log "Calico version: $CALICO_VERSION"
 
 # Disable swap
 log "Disabling swap..."

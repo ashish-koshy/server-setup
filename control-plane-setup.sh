@@ -78,6 +78,22 @@ else
   log "No existing Docker components found"
 fi
 
+# Restore Default iptables Rules
+log "Resetting IPTABLES..."
+FILE="iptables-default.rules"
+echo "*filter" > $FILE
+echo ":INPUT ACCEPT [0:0]" >> $FILE
+echo ":FORWARD ACCEPT [0:0]" >> $FILE
+echo ":OUTPUT ACCEPT [0:0]" >> $FILE
+echo "COMMIT" >> $FILE
+
+# Reset iptables
+apt-get install -y iptables-persistent
+iptables-restore < iptables-default.rules
+iptables -A INPUT -p tcp --dport 6443 -j ACCEPT
+netfilter-persistent save
+netfilter-persistent reload
+
 # Install Docker
 log "Installing Docker..."
 apt-get update

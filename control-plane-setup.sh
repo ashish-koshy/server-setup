@@ -139,4 +139,4 @@ which kubeadm kubectl kubelet kubectl
 log "Initializing Kubernetes control plane..."
 kubeadm init --control-plane-endpoint="$HOST_NAME"
 
-"Control plane setup complete! Use the join command above to add worker nodes."
+log "Control plane setup complete! Use the join command above to add worker nodes."

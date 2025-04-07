@@ -1,14 +1,15 @@
-# Usage for setting up K8:
+        
+        mkdir -p $HOME/.kube
+        sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+        sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
-## Control Plane:
-    ./control-plane-setup.sh <HOSTNAME> [POD_CIDR] [K8S_VERSION] [PAUSE_VERSION] [DOCKER_VERSION]
+        # Verify installation
+        log "Verifying cluster status..."
+        kubectl cluster-info
+        kubectl get nodes
 
-## Worker Node:
-    ./worker-setup.sh <HOSTNAME> [K8S_VERSION] [PAUSE_VERSION] [DOCKER_VERSION]
+        log "Applying CALICO Container Network Interface..."
+        kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VERSION}/manifests/calico.yaml
+        kubectl get pods -n kube-system
 
-## Notes:
-- The control plane script generates the join command automatically during initialization
-- Worker nodes need to be joined manually using the command from the control plane output
-- Both scripts maintain idempotency - can be safely rerun
-- Network configuration (like Calico or Flannel) should be installed separately after control plane initialization
-
+        

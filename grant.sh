@@ -1,8 +1,11 @@
 #!/bin/bash
 
-# Find all .sh files in the current directory and make them executable
+# Get the name of the script itself
+SELF=$(basename "$0")
+
+# Loop through all .sh files, skip self
 for script in *.sh; do
-  if [ -f "$script" ]; then
+  if [ -f "$script" ] && [ "$script" != "$SELF" ]; then
     chmod +x "$script"
     echo "✅ Made $script executable"
   fi

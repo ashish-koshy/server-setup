@@ -2,7 +2,7 @@
 set -e
 
 # Default values
-DEFAULT_HOST_NAME="k8sworker1.example.net"
+DEFAULT_HOST_NAME="k8smaster.example.net"
 
 # Parse command line arguments
 HOST_NAME=${1:-$DEFAULT_HOST_NAME}

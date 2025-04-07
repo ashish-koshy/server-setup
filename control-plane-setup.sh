@@ -3,15 +3,13 @@ set -e
 
 # Default values
 DEFAULT_HOST_NAME="k8smaster.example.net"
-DEFAULT_POD_NETWORK_CIDR="192.168.0.0/16"
 DEFAULT_K8S_VERSION="v1.32"
 DEFAULT_CALICO_VERSION="v3.29.3"
 
 # Parse command line arguments
 HOST_NAME=${1:-$DEFAULT_HOST_NAME}
-POD_NETWORK_CIDR=${2:-$DEFAULT_POD_NETWORK_CIDR}
-K8S_VERSION=${3:-$DEFAULT_K8S_VERSION}
-CALICO_VERSION=${4:-$DEFAULT_CALICO_VERSION}
+K8S_VERSION=${2:-$DEFAULT_K8S_VERSION}
+CALICO_VERSION=${3:-$DEFAULT_CALICO_VERSION}
 
 log() {
   echo "$1"
@@ -22,7 +20,6 @@ hostnamectl set-hostname "$HOST_NAME"
 
 log "Starting control plane installation with parameters:"
 log "Hostname: $HOST_NAME"
-log "Pod Network CIDR: $POD_NETWORK_CIDR"
 log "Kubernetes version: $K8S_VERSION"
 log "Calico version: $CALICO_VERSION"
 
@@ -139,9 +136,7 @@ which kubeadm kubectl kubelet kubectl
 
 # Initialize control plane
 log "Initializing Kubernetes control plane..."
-kubeadm init \
-  --control-plane-endpoint="$HOST_NAME" \
-  --pod-network-cidr="$POD_NETWORK_CIDR"
+kubeadm init --control-plane-endpoint="$HOST_NAME"
 
 # Setup kubeconfig for root (since script is run as sudo)
 mkdir -p /root/.kube

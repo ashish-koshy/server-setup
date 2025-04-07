@@ -124,3 +124,5 @@ log "Kublet enabled."
 log "Checking kubectl, kubelet and kubectl installations..."
 dpkg -l | grep kube
 which kubeadm kubectl kubelet kubectl
+
+log "Kubernetes components have been installed..."

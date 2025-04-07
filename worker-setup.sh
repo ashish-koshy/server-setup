@@ -2,7 +2,7 @@
 set -e
 
 # Default values
-DEFAULT_HOST_NAME="k8worker1.example.net"
+DEFAULT_HOST_NAME="k8sworker1.example.net"
 DEFAULT_K8S_VERSION="v1.32"
 
 # Parse command line arguments

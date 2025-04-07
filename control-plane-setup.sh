@@ -60,6 +60,7 @@ if command -v kubeadm &>/dev/null || [ -d "/etc/kubernetes" ]; then
   apt-get autoremove -y || true
   rm -rf /etc/kubernetes ~/.kube /var/lib/etcd /var/lib/kubelet /etc/cni/net.d
   rm -f /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+  rm -f /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   rm -f /etc/apt/sources.list.d/kubernetes.list
 else
   log "No existing Kubernetes components found"

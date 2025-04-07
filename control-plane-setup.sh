@@ -62,6 +62,7 @@ if command -v kubeadm &>/dev/null || [ -d "/etc/kubernetes" ]; then
   rm -f /etc/apt/keyrings/kubernetes-archive-keyring.gpg
   rm -f /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   rm -f /etc/apt/sources.list.d/kubernetes.list
+  rm -rf $HOME/.kube
 else
   log "No existing Kubernetes components found"
 fi
@@ -138,30 +139,4 @@ which kubeadm kubectl kubelet kubectl
 log "Initializing Kubernetes control plane..."
 kubeadm init --control-plane-endpoint="$HOST_NAME"
 
-# Setup kubeconfig for root (since script is run as sudo)
-mkdir -p /root/.kube
-cp -i /etc/kubernetes/admin.conf /root/.kube/config
-chown root:root /root/.kube/config
-
-# Also set up kubeconfig for the actual sudo user
-if [ -n "$SUDO_USER" ]; then
-  USER_HOME=$(eval echo "~$SUDO_USER")
-  mkdir -p $USER_HOME/.kube
-  cp -i /etc/kubernetes/admin.conf $USER_HOME/.kube/config
-  chown $(id -u "$SUDO_USER"):$(id -g "$SUDO_USER") $USER_HOME/.kube/config
-fi
-log "Control plane initialized."
-
-log "Setting cluster name..."
-kubectl config set-cluster kubernetes --server=https://${HOST_NAME}:6443
-
-# Verify installation
-log "Verifying cluster status..."
-kubectl cluster-info
-kubectl get nodes
-
-log "Applying CALICO Container Network Interface..."
-kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VERSION}/manifests/calico.yaml
-kubectl get pods -n kube-system
-
-echo "Control plane setup complete! Use the join command above to add worker nodes."
+"Control plane setup complete! Use the join command above to add worker nodes."

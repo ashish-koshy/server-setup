@@ -3,16 +3,12 @@ set -e
 
 # Default values
 DEFAULT_K8S_VERSION="v1.32"
-DEFAULT_PAUSE_IMAGE_VERSION="3.10"
-DEFAULT_DOCKER_VERSION="latest"
-DEFAULT_POD_NETWORK_CIDR="10.244.0.0/16"
+DEFAULT_POD_NETWORK_CIDR="192.168.0.0/16"
 
 # Parse command line arguments
 HOST_NAME=$1
 POD_NETWORK_CIDR=${2:-$DEFAULT_POD_NETWORK_CIDR}
 K8S_VERSION=${3:-$DEFAULT_K8S_VERSION}
-PAUSE_IMAGE_VERSION=${4:-$DEFAULT_PAUSE_IMAGE_VERSION}
-DOCKER_VERSION=${5:-$DEFAULT_DOCKER_VERSION}
 
 log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') - $1"
@@ -25,8 +21,6 @@ log "Starting control plane installation with parameters:"
 log "Hostname: $HOST_NAME"
 log "Pod Network CIDR: $POD_NETWORK_CIDR"
 log "Kubernetes version: $K8S_VERSION"
-log "Pause image version: $PAUSE_IMAGE_VERSION"
-log "Docker version: $DOCKER_VERSION"
 
 # Disable swap
 log "Disabling swap..."
@@ -64,6 +58,8 @@ if command -v kubeadm &>/dev/null || [ -d "/etc/kubernetes" ]; then
   apt-get remove --purge -y kubeadm kubectl kubelet kubernetes-cni cri-tools || true
   apt-get autoremove -y || true
   rm -rf /etc/kubernetes ~/.kube /var/lib/etcd /var/lib/kubelet /etc/cni/net.d
+  rm -f /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+  rm -f /etc/apt/sources.list.d/kubernetes.list
 else
   log "No existing Kubernetes components found"
 fi
@@ -76,6 +72,8 @@ if command -v docker &>/dev/null || systemctl list-unit-files | grep -q docker.s
   apt-get remove --purge -y docker-ce docker-ce-cli containerd.io || true
   apt-get autoremove -y || true
   rm -rf /var/lib/docker /var/lib/containerd /etc/docker
+  rm -f /etc/apt/keyrings/docker.gpg
+  rm -f /etc/apt/sources.list.d/docker.list
 else
   log "No existing Docker components found"
 fi
@@ -122,6 +120,8 @@ mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 log "Control plane initialized"
+
+kubectl config set-cluster kubernetes --server=https://${HOST_NAME}:6443
 
 # Verify installation
 log "Verifying cluster status..."

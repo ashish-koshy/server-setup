@@ -2,7 +2,7 @@
 set -e
 
 source ./check-root.sh
-source ./k8-cleanup.sh
+source ./k8s-cleanup.sh
 
 echo "Starting Kubernetes setup process..."
 

@@ -1,17 +1,11 @@
 #!/bin/bash
 set -e
 
+source ./logger.sh
 source ./check-root.sh
 
-# Default values
 DEFAULT_K8S_VERSION="v1.32"
-
-# Parse command line arguments
 K8S_VERSION=${1:-$DEFAULT_K8S_VERSION}
-
-log() {
-  echo "$1"
-}
 
 source ./k8-cleanup.sh
 

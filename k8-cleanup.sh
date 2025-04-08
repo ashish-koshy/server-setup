@@ -1,3 +1,8 @@
+#!/bin/bash
+
+# Exit on any error
+set -e
+
 # Conditional Kubernetes cleanup
 if command -v kubeadm &>/dev/null || [ -d "/etc/kubernetes" ]; then
   log "Removing existing Kubernetes components..."

@@ -1,0 +1,31 @@
+# Conditional Kubernetes cleanup
+if command -v kubeadm &>/dev/null || [ -d "/etc/kubernetes" ]; then
+  log "Removing existing Kubernetes components..."
+  kubeadm reset -f || true
+  systemctl stop kubelet || true
+  systemctl disable kubelet || true
+  apt-mark unhold kubeadm kubectl kubelet || true
+  apt-get remove --purge -y kubeadm kubectl kubelet kubernetes-cni cri-tools || true
+  apt-get autoremove -y || true
+  rm -rf /etc/kubernetes ~/.kube /var/lib/etcd /var/lib/kubelet /etc/cni/net.d
+  rm -f /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+  rm -f /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  rm -f /etc/apt/sources.list.d/kubernetes.list
+  rm -rf $HOME/.kube
+else
+  log "No existing Kubernetes components found"
+fi
+
+# Conditional Docker cleanup
+if command -v docker &>/dev/null || systemctl list-unit-files | grep -q docker.service; then
+  log "Removing existing Docker components..."
+  systemctl stop docker || true
+  systemctl disable docker || true
+  apt-get remove --purge -y docker-ce docker-ce-cli containerd.io || true
+  apt-get autoremove -y || true
+  rm -rf /var/lib/docker /var/lib/containerd /etc/docker
+  rm -f /etc/apt/keyrings/docker.gpg
+  rm -f /etc/apt/sources.list.d/docker.list
+else
+  log "No existing Docker components found"
+fi

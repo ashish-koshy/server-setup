@@ -10,32 +10,6 @@ source ./k8s-cleanup.sh
 
 echo "Kubernetes version selection : $K8S_VERSION"
 
-# Disable swap
-echo "Disabling swap..."
-swapoff -a
-sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
-echo "Swap disabled"
-
-# Load kernel modules
-echo "Loading kernel modules..."
-tee /etc/modules-load.d/containerd.conf <<EOF
-overlay
-br_netfilter
-EOF
-modprobe overlay
-modprobe br_netfilter
-echo "Modules loaded"
-
-# Sysctl configuration
-echo "Configuring sysctl..."
-tee /etc/sysctl.d/kubernetes.conf <<EOT
-net.bridge.bridge-nf-call-ip6tables = 1
-net.bridge.bridge-nf-call-iptables = 1
-net.ipv4.ip_forward = 1
-EOT
-sysctl --system
-echo "Sysctl configured"
-
 # Restore Default iptables Rules
 echo "Resetting IPTABLES..."
 FILE="iptables-default.rules"

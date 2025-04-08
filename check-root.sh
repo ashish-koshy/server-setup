@@ -1,6 +1,4 @@
 #!/bin/bash
-
-# Exit on any error
 set -e
 
 # Check if script is run as root

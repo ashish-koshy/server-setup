@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-source ./logger.sh
 source ./check-root.sh
 source ./k8-cleanup.sh
 

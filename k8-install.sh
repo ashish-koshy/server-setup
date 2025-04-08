@@ -76,6 +76,3 @@ apt update
 apt install -y kubelet kubeadm kubectl
 apt-mark hold kubelet kubeadm kubectl
 echo "Kubernetes components installed successfully."
-
-echo "Kubernetes setup completed successfully!"
-echo "You can now initialize your Kubernetes cluster with 'kubeadm init'"

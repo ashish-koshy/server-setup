@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+source ./check-root.sh
+
 # Default values
 DEFAULT_HOST_NAME="k8smaster.example.net"
 

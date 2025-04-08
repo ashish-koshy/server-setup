@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+source ./check-root.sh
+
 # Default values
 DEFAULT_K8S_VERSION="v1.32"
 

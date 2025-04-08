@@ -1,10 +1,8 @@
 #!/bin/bash
-
-# Exit on any error
 set -e
 
+source ./logger.sh
 source ./check-root.sh
-
 source ./k8-cleanup.sh
 
 echo "Starting Kubernetes setup process..."

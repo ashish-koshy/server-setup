@@ -6,7 +6,7 @@ source ./check-root.sh
 DEFAULT_K8S_VERSION="v1.32"
 K8S_VERSION=${1:-$DEFAULT_K8S_VERSION}
 
-source ./k8-cleanup.sh
+source ./k8s-cleanup.sh
 
 echo "Kubernetes version selection : $K8S_VERSION"
 
